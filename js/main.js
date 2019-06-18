@@ -56,14 +56,17 @@ var tasks = [
 	}
 ]
 
-// ROUTER
-var routes = [
-	{ path: "/", component: { template: '#home' } },
-	{ path: "/tasks", component: { template: '#tasks' } },
-	{ path: "/task/:id", component: { template: "#task" } },
-];
+// FIREBASE CONFIG
+var firebaseConfig = {
+	apiKey: "AIzaSyCJMPQ89hdBBVw7BaytzHuKM_X8thoEy_Y",
+	authDomain: "jsbattle-20e89.firebaseapp.com",
+	databaseURL: "https://jsbattle-20e89.firebaseio.com",
+	projectId: "jsbattle-20e89",
+	storageBucket: "jsbattle-20e89.appspot.com",
+	messagingSenderId: "503959691750",
+	appId: "1:503959691750:web:35c5357eb338b25c"
+};
 
-var router = new VueRouter({ routes })
 
 // TASK-LINK COMPONENT
 Vue.component("task-link", {
@@ -157,6 +160,75 @@ Vue.component("editor", {
   	}
 })
 
+// LOGIN
+var login = Vue.component("login", {
+	template: "#login",
+	data() {
+		return {
+			email: "",
+			password: ""
+		}
+	},
+	methods: {
+		login: function() {
+			if(firebase) this.$root.request = true;
+
+			firebase.auth().signInWithEmailAndPassword(this.email, this.password).then(
+				data => {
+					alert('Well done ! You are now connection ' + data.user.email);
+					this.$root.request = false;
+					this.$router.replace('/');
+				},
+				err => {
+					alert('Oops. ' + err.message);
+					this.$root.request = false;
+				}
+			)
+		}
+	}
+})
+
+// REGISTRATION
+var registration = Vue.component("registration", {
+	template: "#registration",
+	data() {
+		return {
+			name: "",
+			email: "",
+			password: ""
+		}
+	},
+	methods: {
+		register: function() {
+			if(firebase) this.$root.request = true;
+
+			firebase.auth().createUserWithEmailAndPassword(this.email, this.password).then(
+				data => {
+					alert("Your account has been created ! " + data.user.email);
+					this.$root.request = false; 
+					this.$router.replace('/');
+				},
+				err => {
+					alert("Oops. " + err.message);
+					this.$root.request = false;
+				}
+			)
+		}
+	}
+})
+
+// ROUTER
+var routes = [
+	{ path: "*", redirect: "/" },
+	{ path: "/", component: { template: '#home' } },
+	{ path: "/tasks", component: { template: '#tasks' } },
+	{ path: "/tasks/:id", component: { template: "#task" } },
+	{ path: "/registration", component: registration },
+	{ path: "/login", component: login  }
+];
+
+var router = new VueRouter({ routes });
+
 // VUE INSTANCE
 var app = new Vue({
 	el: "#app",
@@ -164,7 +236,10 @@ var app = new Vue({
 	data: {
 		tasks: tasks,
 		tab: "task",
-		mobileNav: false
+		mobileNav: false,
+		request: false,
+		isAuthorized: false,
+		isHidden: false
 	},
 	methods: {
 		switchTab(tab) {
@@ -172,6 +247,23 @@ var app = new Vue({
 		},
 		showMobileNav() {
 			this.mobileNav = !this.mobileNav;
+		},
+		logout() {
+			firebase.auth().signOut().then(() => {
+				this.isAuthorized = false;
+			})
 		}
+	},
+	created: function() {
+		firebase.initializeApp(firebaseConfig);
+
+		firebase.auth().onAuthStateChanged((user) =>{
+			if(user) {
+				this.isAuthorized = true;
+				//this.isHidden = true;
+			}
+		});
+
+		this.isHidden = true;
 	}
 })

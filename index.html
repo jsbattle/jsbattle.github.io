@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>JavaScript code challenge</title>
+	<title>jsbattle</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon">
@@ -11,7 +11,8 @@
 <body>
 
 <div id="app">
-	<div class="uk-container">
+	<div class="lds-rolling" v-if="!isHidden"><div></div></div>
+	<div class="uk-container" v-cloak>
 		<nav class="uk-navbar-container" uk-navbar>
 			<router-link to="/" class="uk-navbar-item uk-logo">
 				<img src="img/logo.png" width="50">
@@ -24,16 +25,25 @@
 		            <li>
 		            	<router-link to="/tasks">Задания</router-link>
 		            </li>
+		            <li v-if="!isAuthorized">
+		            	<router-link to="/registration">Регистрация</router-link>
+		            </li>
+		            <li v-if="!isAuthorized">
+		            	<router-link to="/login">Войти</router-link>
+		            </li>
+					<li v-if="isAuthorized">
+						<a href="#" @click.prevent="logout">Выйты</a>
+					</li>
 		        </ul>
 		        <ul class="uk-navbar-nav uk-hidden@m">
 		            <li>
-		            	<a v-on:click.prevent="showMobileNav"><span uk-icon="icon: table; ratio: 2;"></span></a>
+		            	<a @click.prevent="showMobileNav"><span uk-icon="icon: table; ratio: 2;"></span></a>
 		            </li>
 		        </ul>
 		    </div>
 		</nav>
 		<transition name="slide">
-			<div class="mobile-nav" v-if="mobileNav" v-on:click="mobileNav = false">
+			<div class="mobile-nav" v-if="mobileNav" @click="mobileNav = false">
 				<ul class="mobile-nav__items">
 					<li class="mobile-nav__item">
 						<router-link to="/">Главная</router-link>
@@ -41,6 +51,15 @@
 			        <li class="mobile-nav__item">
 			        	<router-link to="/tasks">Задания</router-link>
 			        </li>
+			        <li v-if="!isAuthorized" class="mobile-nav__item">
+		            	<router-link to="/registration">Регистрация</router-link>
+		            </li>
+		            <li v-if="!isAuthorized" class="mobile-nav__item">
+		            	<router-link to="/login">Войти</router-link>
+		            </li>
+					<li v-if="isAuthorized" class="mobile-nav__item">
+						<a href="#" @click.prevent="logout">Выйты</a>
+					</li>
 			    </ul>
 			</div>
 		</transition>
@@ -53,7 +72,7 @@
 		<div class="uk-width-1-1 uk-text-center uk-width-1-2@m uk-text-left@m">
 			<div class="">#1 ДЛЯ ЗАДАЧ ПО JAVASCRIPT'У И ПОДГОТОВКИ ИНТЕРВЬЮ</div>
 		<h1 class="uk-heading-primary uk-margin-large-bottom header">Совершенствуйте свои навыки JavaScript'a</h1>
-		<div class="uk-button uk-button-default uk-button-large">Попробовать</div>
+		<button class="uk-button uk-button-default uk-button-large">Попробовать</button>
 		</div>
 		<div class="uk-width-1-2 uk-visible@m">
 			<img src="img/code.jpg">
@@ -75,8 +94,8 @@
 	<div class="task" uk-grid>
 		<div class="uk-width-1-1 uk-width-1-2@m">
 			<ul class="uk-child-width-expand uk-margin-top" uk-tab>
-			    <li :class="this.$root.tab === 'task' && 'uk-active'" v-on:click="switchTab('task')"><a href="">Задание</a></li>
-			    <li :class="this.$root.tab === 'result' && 'uk-active'" v-on:click="switchTab('result')"><a href="">Результат</a></li>
+			    <li :class="this.$root.tab === 'task' && 'uk-active'" @click="switchTab('task')"><a href="">Задание</a></li>
+			    <li :class="this.$root.tab === 'result' && 'uk-active'" @click="switchTab('result')"><a href="">Результат</a></li>
 			</ul>
 			<div v-show="this.$root.tab === 'task'">
 				<h3 class="uk-margin-top">{{ item.caption }}</h3>
@@ -131,7 +150,7 @@
 			<div class="uk-margin-top">
 				<div class="uk-margin-remove" uk-grid>
 					<div class="uk-width-1-1 uk-padding-remove">
-						<div class="uk-button uk-button-default uk-button-large uk-width-1-1" v-on:click="runTests">Запуск кода</div>
+						<button class="uk-button uk-button-default uk-button-large uk-width-1-1" @click="runTests">Запуск кода</button>
 					</div>
 				</div>
 			</div>
@@ -140,18 +159,93 @@
 </template>
 
 <template id="task-link-body">
-	<div v-on:click="switchTab('task')">
-		<router-link :to="'/task/' + index" class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-small-top uk-flex uk-flex-between uk-link-reset">
+	<div @click="switchTab('task')">
+		<router-link :to="'/tasks/' + index" class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-small-top uk-flex uk-flex-between uk-link-reset">
 			<p class="uk-position-relative uk-margin-remove">{{ item.caption }}</p>
 			<span class="uk-label uk-label-success status-task" v-if="item.status">
 				<span class="uk-visible@m">Выполнено</span>
-				<span class="uk-hidden@m" uk-icon="check"></span>
+				<div class="uk-inline uk-hidden@m status-task__marker"></div>
 			</span>
 			<span class="uk-label uk-label-danger status-task" v-if="!item.status">
 				<span class="uk-visible@m">Не выполнено</span>
-				<span class="uk-hidden@m" uk-icon="close"></span>
+				<div class="uk-inline uk-hidden@m status-task__marker"></div>
 			</span>
 		</router-link>
+	</div>
+</template>
+
+<template id="registration">
+	<div class="uk-container uk-container-large uk-margin-large-top">
+		<div uk-grid class="uk-child-width-1-1@s uk-child-width-2-3@l">
+			<div class="uk-width-1-1 uk-width-1-3@m"></div>
+			<div class="uk-width-1-1 uk-width-1-3@m">
+				<div class="uk-card uk-card-default">
+					<div class="uk-card-body">
+						<div class="lds-rolling" v-if="$root.request"><div></div></div>
+						<div class="uk-text-center">
+							<h2>Регистрация</h2>
+						</div>
+						<form method="POST">
+							<fieldset class="uk-fieldset">
+								<div class="uk-margin">
+									<input name="name" class="uk-input" type="text" v-model="name" placeholder="Имя" :disabled="$root.request">	
+								</div>
+								<div class="uk-margin">
+									<input name="email" class="uk-input" type="email" v-model="email" placeholder="E-mail" :disabled="$root.request">
+								</div>
+								<div class="uk-margin">
+									<input name="password" class="uk-input" type="password" v-model="password" placeholder="Пароль" :disabled="$root.request">
+								</div>
+								<div class="uk-margin">
+									<button type="submit" class="uk-button uk-button-primary uk-width-1-1" @click.prevent="register" :disabled="$root.request">Регистрация</button>
+								</div>
+								<div class="uk-text-small uk-text-center">
+									Уже есть аккаунт? <router-link to="/login">Войдите</router-link>
+								</div>
+							</fieldset>
+						</form>
+					</div>
+				</div>
+			</div>
+			<div class="uk-width-1-1 uk-width-1-3@m"></div>
+		</div>
+	</div>
+</template>
+
+<template id="login">
+	<div class="uk-container uk-container-large uk-margin-large-top">
+		<div uk-grid class="uk-child-width-1-1@s uk-child-width-2-3@l">
+			<div class="uk-width-1-1 uk-width-1-3@m"></div>
+			<div class="uk-width-1-1 uk-width-1-3@m">
+				<div class="uk-card uk-card-default">
+					<div class="uk-card-body">
+						<div class="lds-rolling" v-if="$root.request"><div></div></div>
+						<div class="uk-text-center">
+							<h2>Авторизация</h2>
+						</div>
+						<form method="POST">
+							<fieldset class="uk-fieldset">
+								<div class="uk-margin">
+									<input name="email" class="uk-input" type="email" v-model="email" placeholder="E-mail" :disabled="$root.request">
+								</div>
+								<div class="uk-margin">
+									<input name="password" class="uk-input" type="password" v-model="password" placeholder="Пароль" :disabled="$root.request">
+								</div>
+								<div class="uk-margin">
+									<button type="submit" class="uk-button uk-button-primary uk-width-1-1" @click.prevent="login" :disabled="$root.request">Войти</button>
+								</div>
+								<div class="uk-text-small uk-text-center">
+									Не зарегистрированны?
+									<br>
+									<router-link to="/registration">Создайте аккаунт</router-link>
+								</div>
+							</fieldset>
+						</form>
+					</div>
+				</div>
+			</div>
+			<div class="uk-width-1-1 uk-width-1-3@m"></div>
+		</div>
 	</div>
 </template>
 
@@ -161,14 +255,13 @@
 	</div>
 </template>
 
-<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-firestore.js"></script>
 <script src="js/uikit.min.js"></script>
 <script src="js/uikit-icons.min.js"></script>
 <script src="js/ace.js"></script>
 <script src="js/vue.min.js"></script>
 <script src="js/vue-router.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/6.1.1/firebase-auth.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
