@@ -80,9 +80,9 @@ Vue.component("task-link", {
 })
 
 // TASK COMPONENT
-Vue.component("task", {
+var task = Vue.component("task", {
 	props: ["item"],
-	template: "#task-body",
+	template: "#task",
 	data() {
 		return {
 			content: null,
@@ -94,6 +94,7 @@ Vue.component("task", {
 		}
 	},
 	created() {
+		this.item = this.$root.tasks[this.$route.params.id];
 		this.$on("change-content", content => {
 			this.content = content;
 		})
@@ -222,7 +223,7 @@ var routes = [
 	{ path: "*", redirect: "/" },
 	{ path: "/", component: { template: '#home' } },
 	{ path: "/tasks", component: { template: '#tasks' } },
-	{ path: "/tasks/:id", component: { template: "#task" } },
+	{ path: "/tasks/:id", component: task },
 	{ path: "/registration", component: registration },
 	{ path: "/login", component: login  }
 ];
