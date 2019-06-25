@@ -1,6 +1,29 @@
 // DATA
 var tasks = [
 	{
+		caption: "Перевернуть строку",
+		description: "Напишите функцию по развороту строки",
+		status: false,
+		function: {
+			name: "reverseString",
+			body: "function reverseString(str) { return str.split('').reverse().join('') }"
+		},
+		tests: [
+			{
+				input: "Hello",
+				output: "olleH"
+			},
+			{
+				input: "apple",
+				output: "elppa"
+			},
+			{
+				input: "I love Javascript",
+				output: "tpircsavaJ evol I"
+			}
+		]
+	},
+	{
 		caption: "Факториал",
 		description: "Напишите функцию по подсчету факториала",
 		status: false,
@@ -30,31 +53,20 @@ var tasks = [
 				output: 362880
 			}
 		]
-	},
-	{
-		caption: "Перевернуть строку",
-		description: "Напишите функцию по развороту строки",
-		status: false,
-		function: {
-			name: "reverseString",
-			body: "function reverseString(str) { return str.split('').reverse().join('') }"
-		},
-		tests: [
-			{
-				input: "Hello",
-				output: "olleH"
-			},
-			{
-				input: "apple",
-				output: "elppa"
-			},
-			{
-				input: "I love Javascript",
-				output: "tpircsavaJ evol I"
-			}
-		]
 	}
 ]
+
+// MESSAGES
+var messages = {
+	error: {
+		nicknameIsBusy: "Данный ник занят",
+		firebase: {
+			"auth/invalid-email": "Введите корректный e-mail",
+			"auth/weak-password": "Пароль должен быть не менее 6 символов.",
+			"auth/email-already-in-use": "Адрес электронной почты уже используется другой учетной записью."
+		}
+	}
+}
 
 // FIREBASE CONFIG
 var firebaseConfig = {
@@ -71,20 +83,15 @@ var firebaseConfig = {
 // TASK-LINK COMPONENT
 Vue.component("task-link", {
 	props: ["item", "index"],
-	template: "#task-link-body",
-	methods: {
-		switchTab(tab) {
-			this.$root.switchTab(tab)
-		}
-	}
+	template: "#task-link-body"
 })
 
 // TASK COMPONENT
 var task = Vue.component("task", {
-	props: ["item"],
 	template: "#task",
 	data() {
 		return {
+			task: null,
 			content: null,
 			test: {
 				results: null,
@@ -94,15 +101,12 @@ var task = Vue.component("task", {
 		}
 	},
 	created() {
-		this.item = this.$root.tasks[this.$route.params.id];
+		this.task = this.$root.tasks[this.$route.params.id];
 		this.$on("change-content", content => {
 			this.content = content;
 		})
 	},
 	methods: {
-		switchTab(tab) {
-			this.$root.switchTab(tab)
-		},
 		runTests() {
 			var data;
 			var output;
@@ -114,12 +118,12 @@ var task = Vue.component("task", {
 			this.test.success = 0;
 			this.test.fail = 0;
 
-			this.item.tests.forEach(test => {
+			this.task.tests.forEach(test => {
 				data = test.input;
 
 				if(typeof data === "string") data = "'" + data + "'";
 
-				input = eval(this.content + this.item.function.name + "(" + data + ")");
+				input = eval(this.content + this.task.function.name + "(" + data + ")");
 				output = test.output;
 
 				if(input === output) {
@@ -140,7 +144,7 @@ var task = Vue.component("task", {
 
 // EDITOR COMPONENT
 Vue.component("editor", {
-  	props: ["identifier", "item"],
+  	props: ["identifier", "task"],
 	template: "#editor-body",
   	data() {
     	return {
@@ -176,12 +180,11 @@ var login = Vue.component("login", {
 
 			firebase.auth().signInWithEmailAndPassword(this.email, this.password).then(
 				data => {
-					alert('Well done ! You are now connection ' + data.user.email);
 					this.$root.request = false;
 					this.$router.replace('/');
 				},
-				err => {
-					alert('Oops. ' + err.message);
+				error => {
+					alert('Oops. ' + error.message);
 					this.$root.request = false;
 				}
 			)
@@ -194,27 +197,152 @@ var registration = Vue.component("registration", {
 	template: "#registration",
 	data() {
 		return {
-			name: "",
+			nickname: "",
 			email: "",
-			password: ""
+			password: "",
+			warning: "",
+			isWarning: false
+		}
+	},
+	watch: {
+		nickname() {
+			this.warning = "";
+			this.isWarning = false;
 		}
 	},
 	methods: {
-		register: function() {
+		checkNickname(nickname) {
+			return firebase.firestore().collection("users").doc(nickname.toLowerCase()).get().then(data => {
+				if(data.exists) {
+					// Если ник занят
+					return false
+				} else {
+					// Если ник свободен
+					return true
+				}
+			})
+		},
+		register() {
 			if(firebase) this.$root.request = true;
 
+			this.checkNickname(this.nickname).then(
+				nicknameIsFree => {
+					if(nicknameIsFree) {
+						this.warning = "";
+						this.isWarning = false;
+						this.createUser();
+
+						return true;
+					} else {
+						this.warning = messages.error.nicknameIsBusy
+						this.isWarning = true;
+						this.$root.request = false;
+
+						return false;
+					}
+				}
+			)
+		},
+		createUser() {
+			// Убираем слушателя Auth так как он срабатывает сразу после регистрации но до загрузки данных
+			this.$root.removeAuthListener();
 			firebase.auth().createUserWithEmailAndPassword(this.email, this.password).then(
 				data => {
-					alert("Your account has been created ! " + data.user.email);
-					this.$root.request = false; 
+					this.updateProfile();
+					this.$root.request = false;
 					this.$router.replace('/');
 				},
-				err => {
-					alert("Oops. " + err.message);
+				error => {
+					this.warning = messages.error.firebase[error.code];
+					this.isWarning = true;
 					this.$root.request = false;
 				}
 			)
+		},
+		updateProfile() {
+			var user = firebase.auth().currentUser;
+			var data = {
+				id: user.uid,
+				nickname: this.nickname.toLowerCase(),
+				tasks: []
+			}
+
+			user.updateProfile({
+				displayName: this.nickname.toLowerCase()
+			}).then(() => {
+				firebase.firestore().collection("users").doc(this.nickname.toLowerCase()).set(data).then(
+					() => {
+						this.$root.onAuthListener();
+					}
+				);
+			})
 		}
+	}
+})
+
+// USER
+var user = Vue.component("user", {
+	template: "#user",
+	data() {
+		return {
+			nickname: null,
+			avatar: null,
+			defaultAvatar: "img/default-avatar.png",
+			notFound: false
+		}
+	},
+	watch:{
+    	$route(){
+        	this.getUserData();
+    	}
+	},
+	methods: {
+		logout() {
+			firebase.auth().signOut().then(
+				() => {
+					this.$root.isAuthorized = false;
+					this.$router.replace("/");
+				}
+			)
+		},
+		checkNickname(nickname) {
+			return firebase.firestore().collection("users").doc(nickname.toLowerCase()).get().then(data => data.exists);
+		},
+		getUserData() {
+			var userData;
+			this.notFound = false;
+			this.nickname = null;
+
+			this.checkNickname(this.$route.params.nickname).then(
+				nickname => {
+					if(nickname) {
+						firebase.firestore().collection("users").doc(this.$route.params.nickname).get().then(
+							data => {
+								userData = data.data();
+								this.nickname = userData.nickname;
+								this.avatar = userData.photoURL;
+							}
+						)
+					} else {
+						this.notFound = true;
+					}
+				}
+			)
+		}
+	},
+	created() {
+		this.getUserData();
+	}
+})
+
+// SETTINGS
+var settings = Vue.component("settings", {
+	template: "#settings",
+	data() {
+		return {}
+	},
+	created() {
+		console.log(this)
 	}
 })
 
@@ -225,7 +353,9 @@ var routes = [
 	{ path: "/tasks", component: { template: '#tasks' } },
 	{ path: "/tasks/:id", component: task },
 	{ path: "/registration", component: registration },
-	{ path: "/login", component: login  }
+	{ path: "/login", component: login, meta: { requiresAuth: true } },
+	{ path: "/user/:nickname", component: user },
+	{ path: "/user/:nickname/settings", component: settings }
 ];
 
 var router = new VueRouter({ routes });
@@ -240,31 +370,44 @@ var app = new Vue({
 		mobileNav: false,
 		request: false,
 		isAuthorized: false,
-		isHidden: false
+		isPreloader: false,
+		nickname: null,
+		uid: null,
+		removeAuthListener: null
 	},
 	methods: {
 		switchTab(tab) {
 			this.tab = tab;
 		},
-		showMobileNav() {
+		toggleMobileNav() {
 			this.mobileNav = !this.mobileNav;
 		},
-		logout() {
-			firebase.auth().signOut().then(() => {
-				this.isAuthorized = false;
-			})
+		getUserData(nickname) {
+			return firebase.firestore().collection("users").doc(nickname).get();
+		},
+		onAuthListener() {
+			this.isPreloader = true;
+			
+			this.removeAuthListener = firebase.auth().onAuthStateChanged(user => {
+				var userData;
+
+				if(user) {
+					this.isAuthorized = true;
+					this.getUserData(user.displayName).then(
+						data => {
+							userData = data.data();
+							this.nickname = userData.nickname;
+							this.uid = userData.id;
+						}
+					)
+				}
+
+				this.isPreloader = false;
+			});
 		}
 	},
 	created: function() {
 		firebase.initializeApp(firebaseConfig);
-
-		firebase.auth().onAuthStateChanged((user) =>{
-			if(user) {
-				this.isAuthorized = true;
-				//this.isHidden = true;
-			}
-		});
-
-		this.isHidden = true;
+		this.onAuthListener();
 	}
 })

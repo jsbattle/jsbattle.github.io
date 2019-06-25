@@ -11,7 +11,7 @@
 <body>
 
 <div id="app">
-	<div class="lds-rolling" v-if="!isHidden"><div></div></div>
+	<div class="lds-rolling" v-if="isPreloader"><div></div></div>
 	<div class="uk-container" v-cloak>
 		<nav class="uk-navbar-container" uk-navbar>
 			<router-link to="/" class="uk-navbar-item uk-logo">
@@ -31,13 +31,13 @@
 		            <li v-if="!isAuthorized">
 		            	<router-link to="/login">Войти</router-link>
 		            </li>
-					<li v-if="isAuthorized">
-						<a href="#" @click.prevent="logout">Выйты</a>
+		            <li v-if="isAuthorized && nickname">
+						<router-link :to="'/user/' + nickname">Профиль</router-link>
 					</li>
 		        </ul>
 		        <ul class="uk-navbar-nav uk-hidden@m">
 		            <li>
-		            	<a @click.prevent="showMobileNav"><span uk-icon="icon: table; ratio: 2;"></span></a>
+		            	<a @click.prevent="toggleMobileNav"><span uk-icon="icon: table; ratio: 2;"></span></a>
 		            </li>
 		        </ul>
 		    </div>
@@ -57,8 +57,8 @@
 		            <li v-if="!isAuthorized" class="mobile-nav__item">
 		            	<router-link to="/login">Войти</router-link>
 		            </li>
-					<li v-if="isAuthorized" class="mobile-nav__item">
-						<a href="#" @click.prevent="logout">Выйты</a>
+		            <li v-if="isAuthorized && nickname">
+						<router-link :to="'/user/' + nickname">Профиль</router-link>
 					</li>
 			    </ul>
 			</div>
@@ -72,7 +72,9 @@
 		<div class="uk-width-1-1 uk-text-center uk-width-1-2@m uk-text-left@m">
 			<div class="">#1 ДЛЯ ЗАДАЧ ПО JAVASCRIPT'У И ПОДГОТОВКИ ИНТЕРВЬЮ</div>
 		<h1 class="uk-heading-primary uk-margin-large-bottom header">Совершенствуйте свои навыки JavaScript'a</h1>
-		<button class="uk-button uk-button-default uk-button-large">Попробовать</button>
+		<div @click="$root.switchTab('task')">
+			<router-link to="/tasks/0" class="uk-button uk-button-default uk-button-large">Попробовать</router-link>
+		</div>
 		</div>
 		<div class="uk-width-1-2 uk-visible@m">
 			<img src="img/code.jpg">
@@ -81,7 +83,7 @@
 </template>
 
 <template id="tasks">
-	<div>
+	<div class="uk-margin-top">
 		<task-link v-for="(task, index) in $root.tasks" :item="task" :index="index"></task-link>
 	</div>
 </template>
@@ -90,16 +92,16 @@
 	<div class="task" uk-grid>
 		<div class="uk-width-1-1 uk-width-1-2@m">
 			<ul class="uk-child-width-expand uk-margin-top" uk-tab>
-			    <li :class="this.$root.tab === 'task' && 'uk-active'" @click="switchTab('task')"><a href="">Задание</a></li>
-			    <li :class="this.$root.tab === 'result' && 'uk-active'" @click="switchTab('result')"><a href="">Результат</a></li>
+			    <li :class="this.$root.tab === 'task' && 'uk-active'" @click="$root.switchTab('task')"><a href="#">Задание</a></li>
+			    <li :class="this.$root.tab === 'result' && 'uk-active'" @click="$root.switchTab('result')"><a href="#">Результат</a></li>
 			</ul>
 			<div v-show="this.$root.tab === 'task'">
-				<h3 class="uk-margin-top">{{ item.caption }}</h3>
-				<p class="uk-margin-top uk-text-small">{{ item.description }}</p>
+				<h3 class="uk-margin-top">{{ task.caption }}</h3>
+				<p class="uk-margin-top uk-text-small">{{ task.description }}</p>
 				<hr>
 				<p class="uk-margin-top uk-text-small">Пример теста</p>
 				<div class="uk-card uk-card-default uk-margin-top uk-margin-bottom uk-padding-small uk-text-small">
-					<div v-for="(test, index) in item.tests.slice(0, 3)" :class="index > 1 || 'uk-margin-bottom'">
+					<div v-for="(test, index) in task.tests.slice(0, 3)" :class="index > 1 || 'uk-margin-bottom'">
 						<div>
 							<span>Ввод:</span> {{ test.input }}
 						</div>
@@ -111,15 +113,15 @@
 			</div>
 			<div v-show="this.$root.tab === 'result'">
 				<h3 class="uk-margin-top">Результат тестов</h3>
-				<div class="status-test" uk-grid>
-					<div class="uk-width-1-2 status-test__message">
+				<div class="status-test" uk-grid v-if="test.results">
+					<div class="uk-width-1-2 status-test__message" v-if="test.success">
 						<div class="uk-alert uk-alert-success">
 							<span class="uk-hidden@s" uk-icon="check"></span>
 							<span class="uk-visible@s">Успешыне</span>
 							: {{ test.success }}
 						</div>
 					</div>
-					<div class="uk-width-1-2 status-test__message">
+					<div class="uk-width-1-2 status-test__message" v-if="test.fail">
 						<div class="uk-alert uk-alert-danger">
 							<span class="uk-hidden@s" uk-icon="close"></span>
 							<span class="uk-visible@s">Не успешыне</span>
@@ -142,7 +144,7 @@
 			</div>
 		</div>
 		<div class="uk-width-1-1 uk-width-1-2@m">
-			<editor identifier="code" :item="item" :index="$route.params.id" class="uk-margin-top"></editor>
+			<editor identifier="code" :task="task" :index="$route.params.id" class="uk-margin-top"></editor>
 			<div class="uk-margin-top">
 				<div class="uk-margin-remove" uk-grid>
 					<div class="uk-width-1-1 uk-padding-remove">
@@ -155,7 +157,7 @@
 </template>
 
 <template id="task-link-body">
-	<div @click="switchTab('task')">
+	<div @click="$root.switchTab('task')">
 		<router-link :to="'/tasks/' + index" class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-small-top uk-flex uk-flex-between uk-link-reset">
 			<p class="uk-position-relative uk-margin-remove">{{ item.caption }}</p>
 			<span class="uk-label uk-label-success status-task" v-if="item.status">
@@ -182,21 +184,24 @@
 							<h2>Регистрация</h2>
 						</div>
 						<form method="POST">
+							<div class="uk-alert-danger" uk-alert v-if="isWarning">
+   		 						<p>{{ warning }}</p>
+							</div>
 							<fieldset class="uk-fieldset">
 								<div class="uk-margin">
-									<input name="name" class="uk-input" type="text" v-model="name" placeholder="Имя" :disabled="$root.request">	
+									<input class="uk-input" type="text" v-model="nickname" placeholder="Никнейм" :disabled="$root.request">	
 								</div>
 								<div class="uk-margin">
-									<input name="email" class="uk-input" type="email" v-model="email" placeholder="E-mail" :disabled="$root.request">
+									<input class="uk-input" type="email" v-model="email" placeholder="E-mail" :disabled="$root.request">
 								</div>
 								<div class="uk-margin">
-									<input name="password" class="uk-input" type="password" v-model="password" placeholder="Пароль" :disabled="$root.request">
+									<input class="uk-input" type="password" v-model="password" placeholder="Пароль" :disabled="$root.request">
 								</div>
 								<div class="uk-margin">
-									<button type="submit" class="uk-button uk-button-primary uk-width-1-1" @click.prevent="register" :disabled="$root.request">Регистрация</button>
+									<button type="submit" class="uk-button uk-button-primary uk-width-1-1" @click.prevent="register" :disabled="$root.request">Зарегистрироваться</button>
 								</div>
 								<div class="uk-text-small uk-text-center">
-									Уже есть аккаунт? <router-link to="/login">Войдите</router-link>
+									Уже зарегистрированы? <router-link to="/login">Войдите</router-link>
 								</div>
 							</fieldset>
 						</form>
@@ -217,23 +222,23 @@
 					<div class="uk-card-body">
 						<div class="lds-rolling" v-if="$root.request"><div></div></div>
 						<div class="uk-text-center">
-							<h2>Авторизация</h2>
+							<h2>Вход</h2>
 						</div>
 						<form method="POST">
 							<fieldset class="uk-fieldset">
 								<div class="uk-margin">
-									<input name="email" class="uk-input" type="email" v-model="email" placeholder="E-mail" :disabled="$root.request">
+									<input class="uk-input" type="email" v-model="email" placeholder="E-mail" :disabled="$root.request">
 								</div>
 								<div class="uk-margin">
-									<input name="password" class="uk-input" type="password" v-model="password" placeholder="Пароль" :disabled="$root.request">
+									<input class="uk-input" type="password" v-model="password" placeholder="Пароль" :disabled="$root.request">
 								</div>
 								<div class="uk-margin">
 									<button type="submit" class="uk-button uk-button-primary uk-width-1-1" @click.prevent="login" :disabled="$root.request">Войти</button>
 								</div>
 								<div class="uk-text-small uk-text-center">
-									Не зарегистрированны?
+									Ещё нет аккаунта?
 									<br>
-									<router-link to="/registration">Создайте аккаунт</router-link>
+									<router-link to="/registration">Зарегистрируйтесь</router-link>
 								</div>
 							</fieldset>
 						</form>
@@ -245,9 +250,81 @@
 	</div>
 </template>
 
+<template id="user">
+	<div>
+		<div class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-top" v-if="nickname">
+			<div v-if="this.$root.isAuthorized">
+				<router-link :to="'/user/' + nickname + '/settings'">Настройки</router-link>
+				<hr class="divider-vertical">
+				<a href="#" @click.prevent="logout">Выйты</a>
+				<hr>
+			</div>
+			<div class="uk-flex uk-flex-middle uk-flex-between">
+				<div class="uk-grid-medium uk-flex-middle" uk-grid>
+                    <div class="uk-width-auto">
+                        <img :src="avatar ? avatar : defaultAvatar" width="80" height="80" alt="">
+                    </div>
+                    <div class="uk-width-expand">
+                        <h2 class="uk-margin-remove">{{ nickname }}</h2>
+                    </div>
+                </div>
+				<div class="uk-card uk-card-default uk-card-body">Кол-во заданий: 999</div>
+			</div>
+			<hr>
+			<a href="#" class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-small-top uk-flex uk-flex-between uk-link-reset">
+				<p class="uk-position-relative uk-margin-remove">Задача</p>
+				<span class="uk-label uk-label-success status-task">
+					<span class="uk-visible@m">Выполнено</span>
+					<div class="uk-inline uk-hidden@m status-task__marker"></div>
+				</span>
+			</a>
+			<a href="#" class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-small-top uk-flex uk-flex-between uk-link-reset">
+				<p class="uk-position-relative uk-margin-remove">Задача</p>
+				<span class="uk-label uk-label-success status-task">
+					<span class="uk-visible@m">Выполнено</span>
+					<div class="uk-inline uk-hidden@m status-task__marker"></div>
+				</span>
+			</a>
+			<a href="#" class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-small-top uk-flex uk-flex-between uk-link-reset">
+				<p class="uk-position-relative uk-margin-remove">Задача</p>
+				<span class="uk-label uk-label-success status-task">
+					<span class="uk-visible@m">Выполнено</span>
+					<div class="uk-inline uk-hidden@m status-task__marker"></div>
+				</span>
+			</a>
+		</div>
+		<div class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-top uk-text-center" v-if="!nickname && notFound">
+			Пользователь с ником {{ this.$route.params.nickname }} не найден
+		</div>
+	</div>
+</template>
+
+<template id="settings">
+	<div>
+		<div v-if="this.$root.isAuthorized && this.$route.params.nickname === this.$root.nickname">
+			<div class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-top">
+				<h3>Изображение профиля</h3>
+				<hr>
+				<div class="uk-grid-medium uk-flex-middle" uk-grid>
+                    <div class="uk-width-auto">
+                        <img class="uk-comment-avatar" src="img/default-avatar.png" width="80" height="80" alt="">
+                    </div>
+                    <div class="uk-width-expand">
+                       	<div uk-form-custom="target: true">
+				            <input type="file" ref="file">
+				            <input class="uk-input uk-form-width-medium" type="text" placeholder="Выберите файл" @click="$refs.file.click()" disabled>
+				        </div>
+				        <button class="uk-button uk-button-default">Отправить</button>
+                    </div>
+                </div>
+			</div>
+		</div>
+	</div>
+</template>
+
 <template id="editor-body">
 	<div class="editor-container">
-		<div :id="identifier" class="editor-field">{{ item.function.body }}</div>
+		<div :id="identifier" class="editor-field">{{ task.function.body }}</div>
 	</div>
 </template>
 
@@ -258,6 +335,8 @@
 <script src="js/vue-router.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/6.1.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-storage.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
