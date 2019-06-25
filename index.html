@@ -57,7 +57,7 @@
 		            <li v-if="!isAuthorized" class="mobile-nav__item">
 		            	<router-link to="/login">Войти</router-link>
 		            </li>
-		            <li v-if="isAuthorized && nickname">
+		            <li v-if="isAuthorized && nickname" class="mobile-nav__item">
 						<router-link :to="'/user/' + nickname">Профиль</router-link>
 					</li>
 			    </ul>
