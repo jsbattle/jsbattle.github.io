@@ -259,17 +259,19 @@
 				<a href="#" @click.prevent="logout">Выйты</a>
 				<hr>
 			</div>
-			<div class="uk-flex uk-flex-middle uk-flex-between">
-				<div class="uk-grid-medium uk-flex-middle" uk-grid>
-                    <div class="uk-width-auto">
+			<div class="uk-flex@m uk-flex-middle uk-flex-between">
+				<div class="uk-grid-medium uk-flex-middle uk-margin-bottom" uk-grid>
+                    <div class="uk-width-1-1 uk-width-auto@m uk-first-column">
                         <img :src="avatar ? avatar : defaultAvatar" width="80" height="80" alt="">
                     </div>
                     <div class="uk-width-expand">
                         <h2 class="uk-margin-remove">{{ nickname }}</h2>
                     </div>
                 </div>
-				<div class="uk-card uk-card-default uk-card-body">Кол-во заданий: 999</div>
 			</div>
+			<div class="uk-width-1-1 uk-width-auto@m uk-inline uk-card uk-card-default uk-card-body">Кол-во заданий: 999</div>
+			<div class="uk-width-1-1 uk-width-auto@m uk-inline uk-card uk-card-default uk-card-body">Уровень: 999</div>
+			<div class="uk-width-1-1 uk-width-auto@m uk-inline uk-card uk-card-default uk-card-body">Рейтинг: 999</div>
 			<hr>
 			<a href="#" class="uk-card uk-card-default uk-card-small uk-card-body uk-margin-small-top uk-flex uk-flex-between uk-link-reset">
 				<p class="uk-position-relative uk-margin-remove">Задача</p>
